@@ -10,7 +10,7 @@ from tqdm import tqdm
 class SimpleRubiksNet(nn.Module):
     """Simple neural network for Q-learning on Rubiks cube"""
     
-    def __init__(self, hidden_size=512):
+    def __init__(self, hidden_size=1024):
         super().__init__()
         self.n_actions = 12  # 12 possible moves
         
@@ -75,7 +75,7 @@ class RubiksEnvironment:
 class SimpleQAgent:
     """Simple Q-learning agent"""
     
-    def __init__(self, lr=1e-3, gamma=0.99, epsilon=1.0, epsilon_decay=0.999, epsilon_min=0.01):
+    def __init__(self, lr=1e-3, gamma=0.99, epsilon=1.0, epsilon_decay=0.9995, epsilon_min=0.1):
         # Device selection
         if torch.backends.mps.is_available():
             self.device = torch.device("mps")
@@ -176,8 +176,8 @@ def train_simple_q():
         "learning_rate": 1e-3,
         "gamma": 0.99,
         "epsilon": 1.0,
-        "epsilon_decay": 0.999,
-        "scramble_steps": 5,
+        "epsilon_decay": 0.9995,
+        "scramble_steps": 3,  # Start easier
         "max_episodes": 20000,
         "eval_freq": 1000,
         "max_episode_steps": 30
@@ -212,6 +212,7 @@ def train_simple_q():
             episode_loss += loss
             
             if done:
+                print(f"🎉 SOLVED in {episode_step} steps at episode {episode}!")
                 break
                 
             state = next_state
@@ -220,8 +221,8 @@ def train_simple_q():
         episode_steps.append(episode_step)
         losses.append(episode_loss / episode_step)
         
-        # Update progress bar
-        if episode % 50 == 0:
+        # Update progress bar more frequently
+        if episode % 10 == 0:
             avg_reward = np.mean(episode_rewards[-100:]) if len(episode_rewards) >= 100 else np.mean(episode_rewards)
             avg_steps = np.mean(episode_steps[-100:]) if len(episode_steps) >= 100 else np.mean(episode_steps)
             avg_loss = np.mean(losses[-100:]) if len(losses) >= 100 else np.mean(losses)
