@@ -75,7 +75,7 @@ class RubiksEnvironment:
 class SimpleQAgent:
     """Simple Q-learning agent"""
     
-    def __init__(self, lr=1e-3, gamma=0.99, epsilon=1.0, epsilon_decay=0.9995, epsilon_min=0.1):
+    def __init__(self, lr=1e-3, gamma=0.99, epsilon=1.0, epsilon_min=0.1, max_episodes=20000):
         # Device selection
         if torch.backends.mps.is_available():
             self.device = torch.device("mps")
@@ -92,8 +92,9 @@ class SimpleQAgent:
         # Q-learning parameters
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
+        self.max_episodes = max_episodes
+        self.episode_count = 0
         
     def select_action(self, state):
         """Epsilon-greedy action selection"""
@@ -128,8 +129,13 @@ class SimpleQAgent:
         loss.backward()
         self.optimizer.step()
         
-        # Decay epsilon
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+        # Linear epsilon decay
+        self.episode_count += 1
+        if self.episode_count <= self.max_episodes:
+            # Decay from 1.0 to epsilon_min over max_episodes
+            self.epsilon = max(self.epsilon_min, 1.0 - (1.0 - self.epsilon_min) * (self.episode_count / self.max_episodes))
+        else:
+            self.epsilon = self.epsilon_min
         
         return loss.item()
 
@@ -176,7 +182,7 @@ def train_simple_q():
         "learning_rate": 1e-3,
         "gamma": 0.99,
         "epsilon": 1.0,
-        "epsilon_decay": 0.9995,
+        "epsilon_decay": "linear",
         "scramble_steps": 3,  # Start easier
         "max_episodes": 20000,
         "eval_freq": 1000,
@@ -185,7 +191,10 @@ def train_simple_q():
     
     # Initialize environment and agent
     env = RubiksEnvironment()
-    agent = SimpleQAgent(lr=wandb.config.learning_rate)
+    agent = SimpleQAgent(
+        lr=wandb.config.learning_rate,
+        max_episodes=wandb.config.max_episodes
+    )
     
     # Training loop
     episode_rewards = []
