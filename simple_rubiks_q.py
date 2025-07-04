@@ -7,30 +7,57 @@ import wandb
 import random
 from tqdm import tqdm
 
-class SimpleRubiksNet(nn.Module):
-    """Simple neural network for Q-learning on Rubiks cube"""
+class RubiksTransformer(nn.Module):
+    """Small transformer for Q-learning on Rubiks cube"""
     
-    def __init__(self, hidden_size=1024):
+    def __init__(self, d_model=256, n_heads=4, n_layers=3, dropout=0.1):
         super().__init__()
+        self.d_model = d_model
         self.n_actions = 12  # 12 possible moves
         
-        # Simple feedforward network
-        # Input: 54 positions * 6 colors = 324 features (flattened one-hot)
-        self.network = nn.Sequential(
-            nn.Linear(324, hidden_size),
+        # Input embedding: 6 colors per position -> d_model
+        self.input_embedding = nn.Linear(6, d_model)
+        
+        # Positional encoding for the 54 cube positions
+        self.pos_encoding = nn.Parameter(torch.randn(54, d_model))
+        
+        # Small transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=n_heads,
+            dim_feedforward=d_model * 2,  # 512
+            dropout=dropout,
+            batch_first=True
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
+        
+        # Global pooling and output head
+        self.global_pool = nn.AdaptiveAvgPool1d(1)
+        self.q_head = nn.Sequential(
+            nn.Linear(d_model, d_model),
             nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(), 
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, self.n_actions)
+            nn.Dropout(dropout),
+            nn.Linear(d_model, self.n_actions)
         )
         
     def forward(self, x):
-        # x shape: (batch_size, 54, 6) -> flatten to (batch_size, 324)
+        # x shape: (batch_size, 54, 6) - one-hot encoded cube state
         batch_size = x.size(0)
-        x = x.view(batch_size, -1)  # Flatten to 324 features
-        return self.network(x)
+        
+        # Embed each position: (batch_size, 54, 6) -> (batch_size, 54, d_model)
+        x = self.input_embedding(x)
+        
+        # Add positional encoding
+        x = x + self.pos_encoding.unsqueeze(0).expand(batch_size, -1, -1)
+        
+        # Apply transformer: (batch_size, 54, d_model) -> (batch_size, 54, d_model)
+        x = self.transformer(x)
+        
+        # Global pooling: (batch_size, 54, d_model) -> (batch_size, d_model)
+        x = self.global_pool(x.transpose(1, 2)).squeeze(-1)
+        
+        # Output Q-values: (batch_size, d_model) -> (batch_size, 12)
+        return self.q_head(x)
 
 class RubiksEnvironment:
     """Simple Rubiks cube environment"""
@@ -86,7 +113,7 @@ class SimpleQAgent:
         print(f"Using device: {self.device}")
         
         # Network
-        self.q_network = SimpleRubiksNet().to(self.device)
+        self.q_network = RubiksTransformer().to(self.device)
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=lr)
         
         # Q-learning parameters
@@ -178,13 +205,13 @@ def train_simple_q():
     
     # Initialize wandb
     wandb.init(project="rubiks-rl", config={
-        "algorithm": "simple_q_learning",
+        "algorithm": "transformer_q_learning",
         "learning_rate": 1e-3,
         "gamma": 0.99,
         "epsilon": 1.0,
         "epsilon_decay": "linear",
-        "scramble_steps": 3,  # Start easier
-        "max_episodes": 20000,
+        "scramble_steps": 5,  # Start easier
+        "max_episodes": 40000,
         "eval_freq": 1000,
         "max_episode_steps": 30
     })
