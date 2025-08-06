@@ -1,3 +1,5 @@
+import numpy as np
+
 """
 Stolen from https://raw.githubusercontent.com/jasonrute/puzzle_cube_code/refs/heads/master/puzzle_cube.py @jasonrute
 """
@@ -68,3 +70,20 @@ class PuzzleCube:
 
     def __repr__(self) -> str:
         return str(self._inner_cube)
+
+    def manhattan_distance(self) -> int:
+        """
+        Calculate Manhattan distance to solved state.
+        The distance is invariant to which color is on which face.
+        
+        :return: Manhattan distance to solved state
+        """
+        # Get current cube state
+        current_state = self._inner_cube._cube_array[0]
+        
+        # Get solved cube state
+        from utils.batch_cube import solved_cube_list
+        solved_state = solved_cube_list
+        
+        # Calculate distance
+        return int(np.sum(current_state != solved_state))
