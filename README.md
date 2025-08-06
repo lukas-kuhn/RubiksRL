@@ -1,4 +1,9 @@
+📝 [**[Experiments Report]**](Report.md)
+
+📊 [**[Raw Experimental Results]**]([Report.md](https://api.wandb.ai/links/lukaskuhn-lku/n9tmf9bs))
+
 # RubiksRL - PuzzleCube Solvers with DQN, REINFORCE, PPO and Supervised Pretraining
+
 
 This repository trains agents to solve a Rubik's Cube (via the PuzzleCube implementation) using multiple approaches:
 - Deep Q-Network (DQN) for value-based learning
