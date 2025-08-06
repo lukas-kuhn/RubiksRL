@@ -1,6 +1,6 @@
 📝 [**[Experiments Report]**](Report.md)
 
-📊 [**[Raw Experimental Results]**]([Report.md](https://api.wandb.ai/links/lukaskuhn-lku/n9tmf9bs))
+📊 [**[Raw Experimental Results]**](https://api.wandb.ai/links/lukaskuhn-lku/n9tmf9bs)
 
 # RubiksRL - PuzzleCube Solvers with DQN, REINFORCE, PPO and Supervised Pretraining
 
